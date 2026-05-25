@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 169a386fd82a3e34eb85b2f66226d260, type: 3}
+  m_Name: OpenAIConfig
+  m_EditorClassIdentifier: 
+  apiKey: f9d5d422-18b5-41c6-8a1d-62afd06dbc55
+  apiUrl: https://ark.cn-beijing.volces.com/api/v3/chat/completions
+  model: doubao-seed-1-6-lite-251015
+  temperature: 0.7
+  maxTokens: 500
+  timeout: 10
+  useCustomEndpoint: 0
+  customApiUrl: 
