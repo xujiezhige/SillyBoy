@@ -284,7 +284,8 @@ namespace SurvivalEngine
                     ItemData idata = ItemData.Get(item.Value.item_id);
                     if (idata != null && item.Value.quantity > 0)
                     {
-                        Item.Create(idata, GetLootRandomPos(), item.Value.quantity, item.Value.durability, item.Value.uid);
+                        Item dropped = Item.Create(idata, GetLootRandomPos(), item.Value.quantity, item.Value.durability, item.Value.uid);
+                        NotifyDropItem(dropped);
                     }
                 }
             }
@@ -307,7 +308,8 @@ namespace SurvivalEngine
             if (item is ItemData)
             {
                 ItemData aitem = (ItemData)item;
-                Item.Create(aitem, pos, quantity);
+                Item dropped = Item.Create(aitem, pos, quantity);
+                NotifyDropItem(dropped);
             }
             if (item is ConstructionData)
             {
@@ -339,6 +341,12 @@ namespace SurvivalEngine
             float radius = Random.Range(0.5f, 1f);
             float angle = Random.Range(0f, 360f) * Mathf.Rad2Deg;
             return transform.position + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
+        }
+
+        private void NotifyDropItem(Item item)
+        {
+            if (item != null && select != null && select.onDropItem != null)
+                select.onDropItem.Invoke(item);
         }
 
         //Delayed kill (useful if the attacking character doing an animation before destroying this)

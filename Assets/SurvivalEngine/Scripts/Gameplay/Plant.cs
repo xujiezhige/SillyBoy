@@ -275,7 +275,11 @@ namespace SurvivalEngine
                 PlayerData.Get().RemoveObject(GetUID());
 
             if (HasFruit())
-                Item.Create(fruit, transform.position, 1);
+            {
+                Item dropped = Item.Create(fruit, transform.position, 1);
+                if (selectable != null && selectable.onDropItem != null)
+                    selectable.onDropItem.Invoke(dropped);
+            }
 
             if (data != null && regrow_on_death)
             {

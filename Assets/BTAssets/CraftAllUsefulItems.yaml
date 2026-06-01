@@ -1,0 +1,78 @@
+name: CraftAllUsefulItems
+repeat: false
+update_interval: 0
+root:
+  name: Repeat Until No Craft Candidate
+  type: Repeater
+  params:
+    repeaterMode: RepeatUntil
+    repeatUntilStatus: Failure
+  children:
+    - name: Craft Next Best Item
+      type: Sequencer
+      children:
+        - name: Find Best Craft Candidate
+          type: Action
+          task: FindBestCraftableItem
+          params:
+            skipOwnedItems: true
+            skipAlreadyCraftedItems: true
+            outputOnlyMissingMaterials: true
+            itemId:
+              var: _bestCraftItemId
+            materialItemIds:
+              var: _missingMaterialItemIds
+        - name: Craft Now Or Gather Materials
+          type: Selector
+          children:
+            - name: Craft Immediately If Possible
+              type: Action
+              task: CraftItem
+              params:
+                itemId:
+                  var: _bestCraftItemId
+            - name: Gather Missing Materials And Craft
+              type: Repeater
+              params:
+                repeaterMode: RepeatUntil
+                repeatUntilStatus: Success
+              children:
+                - name: Gather One Material Then Try Craft
+                  type: Sequencer
+                  children:
+                    - name: Find Nearest Missing Material
+                      type: Action
+                      task: FindNearestMaterial
+                      params:
+                        materialItemIds:
+                          var: _missingMaterialItemIds
+                        range: 999
+                        requireInventorySpace: true
+                        materialItemId:
+                          var: _nearestMaterialItemId
+                        target:
+                          var: _materialTarget
+                        targetObject:
+                          var: _materialTargetObject
+                    - name: Move To Material And Interact
+                      type: Action
+                      task: MoveToInteract
+                      params:
+                        target:
+                          var: _materialTarget
+                        targetObject:
+                          var: _materialTargetObject
+                        droppedItems:
+                          var: _droppedItems
+                    - name: Pick Up Dropped Items
+                      type: Action
+                      task: PickUpDroppedItems
+                      params:
+                        items:
+                          var: _droppedItems
+                    - name: Craft After Gathering
+                      type: Action
+                      task: CraftItem
+                      params:
+                        itemId:
+                          var: _bestCraftItemId

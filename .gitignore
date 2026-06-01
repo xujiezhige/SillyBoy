@@ -1,2 +1,11 @@
 /Library
 /Temp
+/.idea
+/.vs
+.vsconfig
+__pycache__/sync_survival_bt_docs.cpython-312.pyc
+*.csproj
+/Logs
+/obj
+/UserSettings
+SillyBoy.sln

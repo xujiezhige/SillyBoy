@@ -50,6 +50,7 @@ namespace SurvivalEngine
 
         public UnityAction onSelect; //When clicked with mouse, before reaching destination
         public UnityAction<PlayerCharacter> onUse; //After clicked, when character reaches use distance, or when using action button while nearby
+        public UnityAction<Item> onDropItem; //When this selectable creates a dropped item
         public UnityAction onDestroy;
 
         private Collider[] colliders;

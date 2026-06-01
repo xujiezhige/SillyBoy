@@ -1,0 +1,13 @@
+name: SampleBehaviorTree
+repeat: true
+update_interval: 0
+root:
+  type: Sequencer
+  children:
+    - type: Action
+      name: Log Hello
+      task: NodeCanvas.Tasks.Actions.DebugLogText
+      params:
+        log: "Hello from YAML behavior tree"
+        secondsToRun: 0
+        verboseMode: LogOnly
