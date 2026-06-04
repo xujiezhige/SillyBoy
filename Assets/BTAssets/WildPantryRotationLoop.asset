@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a686a47eee2fa44cb0a34b5d86e4d5e, type: 3}
+  m_Name: WildPantryRotationLoop
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"NodeCanvas.BehaviourTrees.BehaviourTree","nodes":[{"repeaterMode":2,"repeatTimes":{"_value":1},"_tag":"Loop
+    Rotate Wild Pantry Priorities","$type":"NodeCanvas.BehaviourTrees.Repeater","$id":"0"},{"_tag":"Rotate
+    Gathering Branches","_position":{"x":260.0,"y":140.0},"$type":"NodeCanvas.BehaviourTrees.FlipSelector","$id":"1"},{"_tag":"Gather
+    Herbs And Seeds","_position":{"x":520.0,"y":280.0},"$type":"NodeCanvas.BehaviourTrees.Sequencer","$id":"2"},{"_action":{"materialItemIds":{"_value":["herbs","seed_wheat","seed_corn","seed_carrot"]},"range":{"_value":55.0},"requireInventorySpace":{"_value":true},"avoidRecentlyFailedTargets":{"_value":true},"failedTargetCooldown":{"_value":12.0},"requireReachablePath":{"_value":true},"craftItemId":{},"rememberFailedCraftCandidate":{"_value":true},"failedCraftCandidateCooldown":{"_value":15.0},"materialItemId":{"_name":"_nearestMaterialItemId"},"target":{"_name":"_materialTarget"},"targetObject":{"_name":"_materialTargetObject"},"$type":"SurvivalEngine.FindNearestMaterial"},"_tag":"Find
+    Pantry Plant","_position":{"x":780.0,"y":420.0},"$type":"NodeCanvas.BehaviourTrees.ActionNode","$id":"3"},{"_action":{"target":{"_name":"_materialTarget"},"targetObject":{"_name":"_materialTargetObject"},"droppedItems":{"_name":"_droppedItems"},"$type":"SurvivalEngine.MoveToInteract"},"_tag":"Move
+    To Pantry Plant","_position":{"x":780.0,"y":560.0},"$type":"NodeCanvas.BehaviourTrees.ActionNode","$id":"4"},{"_action":{"items":{"_name":"_droppedItems"},"$type":"SurvivalEngine.PickUpDroppedItems"},"_tag":"Pick
+    Up Pantry Plant Drops","_position":{"x":780.0,"y":700.0},"$type":"NodeCanvas.BehaviourTrees.ActionNode","$id":"5"},{"_tag":"Gather
+    Useful Craft Materials","_position":{"x":520.0,"y":840.0},"$type":"NodeCanvas.BehaviourTrees.Sequencer","$id":"6"},{"_action":{"materialItemIds":{"_value":["wood","rock"]},"range":{"_value":55.0},"requireInventorySpace":{"_value":true},"avoidRecentlyFailedTargets":{"_value":true},"failedTargetCooldown":{"_value":12.0},"requireReachablePath":{"_value":true},"craftItemId":{},"rememberFailedCraftCandidate":{"_value":true},"failedCraftCandidateCooldown":{"_value":15.0},"materialItemId":{"_name":"_nearestMaterialItemId"},"target":{"_name":"_materialTarget"},"targetObject":{"_name":"_materialTargetObject"},"$type":"SurvivalEngine.FindNearestMaterial"},"_tag":"Find
+    Nearby Wood Or Rock","_position":{"x":780.0,"y":980.0},"$type":"NodeCanvas.BehaviourTrees.ActionNode","$id":"7"},{"_action":{"target":{"_name":"_materialTarget"},"targetObject":{"_name":"_materialTargetObject"},"droppedItems":{"_name":"_droppedItems"},"$type":"SurvivalEngine.MoveToInteract"},"_tag":"Move
+    To Craft Material","_position":{"x":780.0,"y":1120.0},"$type":"NodeCanvas.BehaviourTrees.ActionNode","$id":"8"},{"_action":{"items":{"_name":"_droppedItems"},"$type":"SurvivalEngine.PickUpDroppedItems"},"_tag":"Pick
+    Up Craft Material Drops","_position":{"x":780.0,"y":1260.0},"$type":"NodeCanvas.BehaviourTrees.ActionNode","$id":"9"}],"connections":[{"_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"NodeCanvas.BehaviourTrees.BTConnection"},{"_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"$type":"NodeCanvas.BehaviourTrees.BTConnection"},{"_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"6"},"$type":"NodeCanvas.BehaviourTrees.BTConnection"},{"_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"3"},"$type":"NodeCanvas.BehaviourTrees.BTConnection"},{"_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"4"},"$type":"NodeCanvas.BehaviourTrees.BTConnection"},{"_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"5"},"$type":"NodeCanvas.BehaviourTrees.BTConnection"},{"_sourceNode":{"$ref":"6"},"_targetNode":{"$ref":"7"},"$type":"NodeCanvas.BehaviourTrees.BTConnection"},{"_sourceNode":{"$ref":"6"},"_targetNode":{"$ref":"8"},"$type":"NodeCanvas.BehaviourTrees.BTConnection"},{"_sourceNode":{"$ref":"6"},"_targetNode":{"$ref":"9"},"$type":"NodeCanvas.BehaviourTrees.BTConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{"_droppedItems":{"_name":"_droppedItems","_id":"07628585-275b-47a2-ba60-ecd2bd1596cb","$type":"NodeCanvas.Framework.Variable`1[[System.Collections.Generic.List`1[[UnityEngine.GameObject,
+    UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]],
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"},"_materialTarget":{"_name":"_materialTarget","_id":"e77ca4f4-9e6f-4776-bf05-f85a4fd4d6b1","$type":"NodeCanvas.Framework.Variable`1[[UnityEngine.Vector2,
+    UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"_materialTargetObject":{"_name":"_materialTargetObject","_id":"d5398230-e5a8-4386-854f-53d71fe49b95","$type":"NodeCanvas.Framework.Variable`1[[UnityEngine.GameObject,
+    UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"_nearestMaterialItemId":{"_name":"_nearestMaterialItemId","_id":"6fca363a-3789-4e40-92e0-2df0e88b1280","$type":"NodeCanvas.Framework.Variable`1[[System.String,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}}},"derivedData":{"repeat":true,"$type":"NodeCanvas.BehaviourTrees.BehaviourTree+DerivedSerializationData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.25
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0

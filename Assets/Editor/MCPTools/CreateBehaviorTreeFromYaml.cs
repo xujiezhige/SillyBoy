@@ -80,25 +80,34 @@ namespace SillyBoy.Editor.MCPTools
                 var config = ParseYaml(yamlText);
                 ValidateConfig(config);
 
-                var tree = ScriptableObject.CreateInstance<BehaviourTree>();
-                tree.name = string.IsNullOrWhiteSpace(config.name)
+                var builtTree = ScriptableObject.CreateInstance<BehaviourTree>();
+                builtTree.name = string.IsNullOrWhiteSpace(config.name)
                     ? Path.GetFileNameWithoutExtension(assetPath)
                     : config.name;
-                tree.repeat = config.repeat;
-                tree.updateInterval = config.update_interval;
+                builtTree.repeat = config.repeat;
+                builtTree.updateInterval = config.update_interval;
 
                 var layout = new LayoutState();
-                var root = BuildNode(tree, config.root, "root", 0, layout, warnings, strict);
-                tree.primeNode = root;
-                tree.SelfSerialize();
+                var blackboardVariables = new Dictionary<string, Type>(StringComparer.Ordinal);
+                var root = BuildNode(builtTree, config.root, "root", 0, layout, warnings, strict, blackboardVariables);
+                builtTree.primeNode = root;
+                EnsureGraphBlackboardVariables(builtTree, blackboardVariables, warnings);
+                builtTree.SelfSerialize();
 
                 EnsureAssetFolder(assetPath);
+                BehaviourTree tree;
                 if (existingAsset != null)
                 {
-                    AssetDatabase.DeleteAsset(assetPath);
+                    EditorUtility.CopySerialized(builtTree, existingAsset);
+                    UnityEngine.Object.DestroyImmediate(builtTree);
+                    tree = existingAsset;
                 }
-
-                AssetDatabase.CreateAsset(tree, assetPath);
+                else
+                {
+                    tree = builtTree;
+                    AssetDatabase.CreateAsset(tree, assetPath);
+                }
+                
                 EditorUtility.SetDirty(tree);
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
@@ -188,7 +197,8 @@ namespace SillyBoy.Editor.MCPTools
             int depth,
             LayoutState layout,
             List<string> warnings,
-            bool strict
+            bool strict,
+            Dictionary<string, Type> blackboardVariables
         )
         {
             if (yaml == null)
@@ -212,10 +222,10 @@ namespace SillyBoy.Editor.MCPTools
                 node.tag = yaml.name;
             }
 
-            var assignedTask = AssignTaskIfNeeded(node, yaml, warnings, strict);
+            var assignedTask = AssignTaskIfNeeded(node, yaml, warnings, strict, blackboardVariables);
             if (!assignedTask)
             {
-                ApplyParameters(node, yaml.parameters, warnings, strict, $"node '{yaml.type}'");
+                ApplyParameters(node, yaml.parameters, warnings, strict, $"node '{yaml.type}'", blackboardVariables);
             }
 
             if (yaml.children != null)
@@ -223,7 +233,7 @@ namespace SillyBoy.Editor.MCPTools
                 for (var i = 0; i < yaml.children.Count; i++)
                 {
                     var childPath = $"{yamlPath}.children[{i}]";
-                    var child = BuildNode(tree, yaml.children[i], childPath, depth + 1, layout, warnings, strict);
+                    var child = BuildNode(tree, yaml.children[i], childPath, depth + 1, layout, warnings, strict, blackboardVariables);
                     tree.ConnectNodes(node, child, i);
                 }
             }
@@ -231,7 +241,12 @@ namespace SillyBoy.Editor.MCPTools
             return node;
         }
 
-        private static bool AssignTaskIfNeeded(BTNode node, BehaviourTreeNodeYaml yaml, List<string> warnings, bool strict)
+        private static bool AssignTaskIfNeeded(
+            BTNode node,
+            BehaviourTreeNodeYaml yaml,
+            List<string> warnings,
+            bool strict,
+            Dictionary<string, Type> blackboardVariables)
         {
             if (node is ActionNode actionNode)
             {
@@ -243,7 +258,7 @@ namespace SillyBoy.Editor.MCPTools
 
                 var taskType = ResolveType(yaml.task, typeof(ActionTask));
                 actionNode.action = (ActionTask)Activator.CreateInstance(taskType);
-                ApplyParameters(actionNode.action, yaml.parameters, warnings, strict, $"task '{yaml.task}'");
+                ApplyParameters(actionNode.action, yaml.parameters, warnings, strict, $"task '{yaml.task}'", blackboardVariables);
                 return true;
             }
 
@@ -257,7 +272,7 @@ namespace SillyBoy.Editor.MCPTools
 
                 var taskType = ResolveType(yaml.task, typeof(ConditionTask));
                 conditionNode.condition = (ConditionTask)Activator.CreateInstance(taskType);
-                ApplyParameters(conditionNode.condition, yaml.parameters, warnings, strict, $"task '{yaml.task}'");
+                ApplyParameters(conditionNode.condition, yaml.parameters, warnings, strict, $"task '{yaml.task}'", blackboardVariables);
                 return true;
             }
 
@@ -366,7 +381,8 @@ namespace SillyBoy.Editor.MCPTools
             Dictionary<string, object> parameters,
             List<string> warnings,
             bool strict,
-            string context
+            string context,
+            Dictionary<string, Type> blackboardVariables
         )
         {
             if (target == null || parameters == null)
@@ -376,7 +392,7 @@ namespace SillyBoy.Editor.MCPTools
 
             foreach (var pair in parameters)
             {
-                if (!TrySetMember(target, pair.Key, pair.Value, out var message))
+                if (!TrySetMember(target, pair.Key, pair.Value, blackboardVariables, warnings, out var message))
                 {
                     var warning = $"{context}: {message}";
                     if (strict)
@@ -389,14 +405,20 @@ namespace SillyBoy.Editor.MCPTools
             }
         }
 
-        private static bool TrySetMember(object target, string memberName, object rawValue, out string message)
+        private static bool TrySetMember(
+            object target,
+            string memberName,
+            object rawValue,
+            Dictionary<string, Type> blackboardVariables,
+            List<string> warnings,
+            out string message)
         {
             var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
             var type = target.GetType();
             var field = type.GetField(memberName, flags);
             if (field != null)
             {
-                var converted = ConvertValue(rawValue, field.FieldType);
+                var converted = ConvertValue(rawValue, field.FieldType, blackboardVariables, warnings);
                 field.SetValue(target, converted);
                 message = null;
                 return true;
@@ -405,7 +427,7 @@ namespace SillyBoy.Editor.MCPTools
             var property = type.GetProperty(memberName, flags);
             if (property != null && property.CanWrite)
             {
-                var converted = ConvertValue(rawValue, property.PropertyType);
+                var converted = ConvertValue(rawValue, property.PropertyType, blackboardVariables, warnings);
                 property.SetValue(target, converted, null);
                 message = null;
                 return true;
@@ -414,7 +436,7 @@ namespace SillyBoy.Editor.MCPTools
             var caseInsensitiveField = type.GetFields(flags).FirstOrDefault(f => StringEquals(f.Name, memberName));
             if (caseInsensitiveField != null)
             {
-                var converted = ConvertValue(rawValue, caseInsensitiveField.FieldType);
+                var converted = ConvertValue(rawValue, caseInsensitiveField.FieldType, blackboardVariables, warnings);
                 caseInsensitiveField.SetValue(target, converted);
                 message = null;
                 return true;
@@ -423,7 +445,7 @@ namespace SillyBoy.Editor.MCPTools
             var caseInsensitiveProperty = type.GetProperties(flags).FirstOrDefault(p => StringEquals(p.Name, memberName) && p.CanWrite);
             if (caseInsensitiveProperty != null)
             {
-                var converted = ConvertValue(rawValue, caseInsensitiveProperty.PropertyType);
+                var converted = ConvertValue(rawValue, caseInsensitiveProperty.PropertyType, blackboardVariables, warnings);
                 caseInsensitiveProperty.SetValue(target, converted, null);
                 message = null;
                 return true;
@@ -433,7 +455,11 @@ namespace SillyBoy.Editor.MCPTools
             return false;
         }
 
-        private static object ConvertValue(object rawValue, Type targetType)
+        private static object ConvertValue(
+            object rawValue,
+            Type targetType,
+            Dictionary<string, Type> blackboardVariables,
+            List<string> warnings)
         {
             if (typeof(BBParameter).IsAssignableFrom(targetType))
             {
@@ -441,10 +467,11 @@ namespace SillyBoy.Editor.MCPTools
                 if (TryGetBlackboardVariableName(rawValue, out var variableName))
                 {
                     bbParameter.name = variableName;
+                    RegisterBlackboardVariable(variableName, bbParameter.varType, blackboardVariables, warnings);
                     return bbParameter;
                 }
 
-                bbParameter.value = ConvertValue(rawValue, bbParameter.varType);
+                bbParameter.value = ConvertValue(rawValue, bbParameter.varType, blackboardVariables, warnings);
                 return bbParameter;
             }
 
@@ -506,12 +533,90 @@ namespace SillyBoy.Editor.MCPTools
                 return new Vector3(values.ElementAtOrDefault(0), values.ElementAtOrDefault(1), values.ElementAtOrDefault(2));
             }
 
+            if (targetType.IsArray)
+            {
+                var elementType = targetType.GetElementType();
+                var items = ToObjectList(rawValue);
+                var array = Array.CreateInstance(elementType, items.Count);
+                for (var i = 0; i < items.Count; i++)
+                {
+                    array.SetValue(ConvertValue(items[i], elementType, blackboardVariables, warnings), i);
+                }
+
+                return array;
+            }
+
+            if (targetType.IsGenericType && typeof(IList).IsAssignableFrom(targetType))
+            {
+                var elementType = targetType.GetGenericArguments()[0];
+                var list = (IList)Activator.CreateInstance(targetType);
+                foreach (var item in ToObjectList(rawValue))
+                {
+                    list.Add(ConvertValue(item, elementType, blackboardVariables, warnings));
+                }
+
+                return list;
+            }
+
             if (typeof(UnityEngine.Object).IsAssignableFrom(targetType) && rawValue is string assetPath)
             {
                 return AssetDatabase.LoadAssetAtPath(assetPath, targetType);
             }
 
             return Convert.ChangeType(rawValue, targetType, CultureInfo.InvariantCulture);
+        }
+
+        private static void RegisterBlackboardVariable(
+            string variableName,
+            Type variableType,
+            Dictionary<string, Type> blackboardVariables,
+            List<string> warnings)
+        {
+            if (string.IsNullOrWhiteSpace(variableName) || variableType == null)
+                return;
+
+            if (blackboardVariables.TryGetValue(variableName, out var existingType))
+            {
+                if (existingType != variableType)
+                {
+                    warnings.Add(
+                        $"Blackboard variable '{variableName}' is bound with conflicting types: {existingType.Name} and {variableType.Name}.");
+                }
+                return;
+            }
+
+            blackboardVariables[variableName] = variableType;
+        }
+
+        private static void EnsureGraphBlackboardVariables(
+            BehaviourTree tree,
+            Dictionary<string, Type> blackboardVariables,
+            List<string> warnings)
+        {
+            if (tree == null || blackboardVariables == null || blackboardVariables.Count == 0)
+                return;
+
+            var blackboard = tree.blackboard;
+            if (blackboard == null)
+            {
+                warnings.Add("BehaviourTree graph blackboard is unavailable; variable bindings will be promoted dynamically at runtime.");
+                return;
+            }
+
+            foreach (var pair in blackboardVariables.OrderBy(p => p.Key, StringComparer.Ordinal))
+            {
+                if (blackboard.variables != null && blackboard.variables.TryGetValue(pair.Key, out var existing))
+                {
+                    if (existing != null && existing.varType != pair.Value)
+                    {
+                        warnings.Add(
+                            $"Existing graph blackboard variable '{pair.Key}' has type {existing.varType.Name}; YAML binding expects {pair.Value.Name}.");
+                    }
+                    continue;
+                }
+
+                blackboard.AddVariable(pair.Key, pair.Value);
+            }
         }
 
         private static bool TryGetBlackboardVariableName(object rawValue, out string variableName)
@@ -570,6 +675,18 @@ namespace SillyBoy.Editor.MCPTools
                 .Split(',')
                 .Select(v => Convert.ToSingle(v.Trim(), CultureInfo.InvariantCulture))
                 .ToList();
+        }
+
+        private static List<object> ToObjectList(object rawValue)
+        {
+            if (rawValue is IEnumerable enumerable && !(rawValue is string))
+            {
+                return enumerable.Cast<object>().ToList();
+            }
+
+            return rawValue == null
+                ? new List<object>()
+                : new List<object> { rawValue };
         }
 
         private static string NormalizeFilePath(string path)

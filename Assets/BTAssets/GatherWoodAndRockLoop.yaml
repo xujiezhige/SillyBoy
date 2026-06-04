@@ -1,0 +1,46 @@
+name: GatherWoodAndRockLoop
+repeat: true
+update_interval: 0
+root:
+  name: Loop Gather Wood And Rock
+  type: Repeater
+  params:
+    repeaterMode: RepeatForever
+  children:
+    - name: Gather One Wood Or Rock
+      type: Sequencer
+      children:
+        - name: Find Nearest Wood Or Rock
+          type: Action
+          task: FindNearestMaterial
+          params:
+            materialItemIds:
+              - wood
+              - rock
+            range: 120
+            requireInventorySpace: true
+            avoidRecentlyFailedTargets: true
+            failedTargetCooldown: 8
+            requireReachablePath: true
+            materialItemId:
+              var: _nearestMaterialItemId
+            target:
+              var: _materialTarget
+            targetObject:
+              var: _materialTargetObject
+        - name: Move To Material And Interact
+          type: Action
+          task: MoveToInteract
+          params:
+            target:
+              var: _materialTarget
+            targetObject:
+              var: _materialTargetObject
+            droppedItems:
+              var: _droppedItems
+        - name: Pick Up Dropped Items
+          type: Action
+          task: PickUpDroppedItems
+          params:
+            items:
+              var: _droppedItems

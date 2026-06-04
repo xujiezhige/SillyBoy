@@ -1,0 +1,54 @@
+name: ToolProgressionLoop
+repeat: true
+update_interval: 0
+root:
+  name: Loop Build Tool Readiness
+  type: Repeater
+  params:
+    repeaterMode: RepeatForever
+  children:
+    - name: Craft Tool Or Gather Core Materials
+      type: Selector
+      children:
+        - name: Craft Pickaxe When Ready
+          type: Action
+          task: CraftItem
+          params:
+            itemId: pickaxe
+        - name: Gather Tool Materials
+          type: Sequencer
+          children:
+            - name: Find Wood Or Rock For Tools
+              type: Action
+              task: FindNearestMaterial
+              params:
+                materialItemIds:
+                  - wood
+                  - rock
+                range: 100
+                requireInventorySpace: true
+                avoidRecentlyFailedTargets: true
+                failedTargetCooldown: 10
+                requireReachablePath: true
+                materialItemId:
+                  var: _nearestMaterialItemId
+                target:
+                  var: _materialTarget
+                targetObject:
+                  var: _materialTargetObject
+            - name: Move To Tool Material
+              type: Action
+              task: MoveToInteract
+              params:
+                target:
+                  var: _materialTarget
+                targetObject:
+                  var: _materialTargetObject
+                droppedItems:
+                  var: _droppedItems
+            - name: Pick Up Tool Material Drops
+              type: Action
+              task: PickUpDroppedItems
+              params:
+                items:
+                  var: _droppedItems

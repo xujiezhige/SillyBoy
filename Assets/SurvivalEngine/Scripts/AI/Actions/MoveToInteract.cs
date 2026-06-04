@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using NodeCanvas.Framework;
 using ParadoxNotion.Design;
+using SurvivalEngine.Debugging;
 using UnityEngine;
 
 namespace SurvivalEngine
@@ -21,6 +22,9 @@ namespace SurvivalEngine
         public BBParameter<List<GameObject>> droppedItems;
 
         private const float StopDistance = 0.2f;
+        private const float AutoMoveLostRetryDelay = 0.35f;
+        private const int MaxAutoMoveRetries = 2;
+        private const float FailureMemoryCooldown = 10f;
 
         private PlayerCharacter player;
         private Selectable selectable;
@@ -31,6 +35,8 @@ namespace SurvivalEngine
         private bool hasMoveRequest;
         private bool interactionStarted;
         private bool completed;
+        private float autoMoveLostTimer;
+        private int autoMoveRetryCount;
 
         protected override string info
         {
@@ -39,12 +45,14 @@ namespace SurvivalEngine
 
         protected override void OnExecute()
         {
-            player = PlayerCharacter.GetFirst();
+            player = AIRuntimeSceneQuery.GetPrimaryPlayer();
             droppedItemObjects = new List<GameObject>();
             gameObjectTarget = targetObject.value;
             selectable = GetInteractableTarget();
             interactionStarted = false;
             completed = false;
+            autoMoveLostTimer = 0f;
+            autoMoveRetryCount = 0;
             SaveDroppedItems(droppedItemObjects);
 
             if (player == null)
@@ -96,8 +104,17 @@ namespace SurvivalEngine
                 return;
             }
 
+            if (player.IsSwimming())
+            {
+                HandleMovementFailure("movement_stopped_while_swimming");
+                return;
+            }
+
             if (!hasMoveRequest || HasTargetChanged())
                 RequestMove();
+
+            if (DetectLostAutoMove())
+                return;
 
             if (!CanInteract() && HasReachedTarget())
             {
@@ -125,6 +142,8 @@ namespace SurvivalEngine
             hasMoveRequest = false;
             interactionStarted = false;
             completed = false;
+            autoMoveLostTimer = 0f;
+            autoMoveRetryCount = 0;
         }
 
         private bool CanInteract()
@@ -157,24 +176,47 @@ namespace SurvivalEngine
             lastTarget = target.value;
             lastTargetPosition = GetTargetPosition();
             hasMoveRequest = true;
+            autoMoveLostTimer = 0f;
             player.MoveTo(lastTargetPosition);
+        }
+
+        private bool DetectLostAutoMove()
+        {
+            if (!hasMoveRequest || interactionStarted || completed || HasReachedTarget())
+                return false;
+
+            if (player.IsAutoMove())
+            {
+                autoMoveLostTimer = 0f;
+                return false;
+            }
+
+            autoMoveLostTimer += Time.deltaTime;
+            if (autoMoveLostTimer < AutoMoveLostRetryDelay)
+                return true;
+
+            if (autoMoveRetryCount < MaxAutoMoveRetries)
+            {
+                autoMoveRetryCount++;
+                RequestMove();
+                return true;
+            }
+
+            RecordMovementFailureEvent("move_to_interact_lost_auto_move");
+            HandleMovementFailure("move_to_interact_lost_auto_move");
+            return true;
         }
 
         private Vector3 GetTargetPosition()
         {
-            Vector3 position;
             if (selectable != null)
-                position = selectable.GetClosestInteractPoint(player.GetInteractCenter());
-            else if (gameObjectTarget != null)
-                position = gameObjectTarget.transform.position;
-            else
-            {
-                Vector2 targetPoint = target.value;
-                position = new Vector3(targetPoint.x, player.transform.position.y, targetPoint.y);
-            }
+                return selectable.GetClosestInteractPoint(player.GetInteractCenter());
 
-            position.y = player.transform.position.y;
-            return position;
+            if (gameObjectTarget != null)
+                return gameObjectTarget.transform.position;
+
+            Vector2 targetPoint = target.value;
+            return new Vector3(targetPoint.x, player.transform.position.y, targetPoint.y);
         }
 
         private bool HasReachedTarget()
@@ -229,6 +271,52 @@ namespace SurvivalEngine
         private void SaveDroppedItems(List<GameObject> items)
         {
             droppedItems.value = items;
+        }
+
+        private void RememberFailure(string reason)
+        {
+            if (player == null)
+                return;
+
+            string itemId = null;
+            Item item = gameObjectTarget != null ? gameObjectTarget.GetComponent<Item>() : null;
+            if (item != null && item.data != null)
+                itemId = item.data.id;
+
+            AITargetFailureMemory.RememberFailure(
+                gameObjectTarget,
+                itemId,
+                lastTargetPosition != Vector3.zero ? lastTargetPosition : player.transform.position,
+                reason,
+                FailureMemoryCooldown);
+        }
+
+        private void HandleMovementFailure(string reason)
+        {
+            RememberFailure(reason);
+            player.StopMove();
+            EndAction(false);
+        }
+
+        private void RecordMovementFailureEvent(string reason)
+        {
+            var debugger = GameStateDebugger.Instance;
+            if (debugger == null)
+                return;
+
+            debugger.RecordEvent(
+                "behavior_tree",
+                reason,
+                "MoveToInteract abandoned the current target after auto movement stopped before reaching it.",
+                "warning",
+                new Dictionary<string, object>
+                {
+                    ["target_position"] = lastTargetPosition,
+                    ["player_position"] = player.transform.position,
+                    ["retry_count"] = autoMoveRetryCount,
+                    ["is_swimming"] = player.IsSwimming(),
+                    ["target_object"] = gameObjectTarget != null ? gameObjectTarget.name : null
+                });
         }
 
         private void OnDropItem(Item item)

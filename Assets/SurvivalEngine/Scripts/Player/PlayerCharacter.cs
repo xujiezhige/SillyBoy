@@ -1115,7 +1115,8 @@ namespace SurvivalEngine
         //Can the player give any command to the character?
         public bool IsControlsEnabled()
         {
-            return move_enabled && controls_enabled && !IsDead() && !TheUI.Get().IsFullPanelOpened();
+            TheUI ui = TheUI.Get();
+            return move_enabled && controls_enabled && !IsDead() && (ui == null || !ui.IsFullPanelOpened());
         }
 
         //Can the character move? Or is it performing an action that prevents him from moving?

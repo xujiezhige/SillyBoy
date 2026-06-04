@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using NodeCanvas.Framework;
 using ParadoxNotion.Design;
+using SurvivalEngine.Debugging;
 using UnityEngine;
 
 namespace SurvivalEngine
@@ -19,6 +20,12 @@ namespace SurvivalEngine
         [Tooltip("When enabled, outputs only missing material ids. When disabled, outputs all material ids required by the selected recipe.")]
         public bool outputOnlyMissingMaterials = true;
 
+        [Tooltip("When enabled, skips craft candidates that recently failed because the tree could not find a gatherable source for their missing materials.")]
+        public bool skipRecentlyFailedCraftCandidates = true;
+
+        [Tooltip("When enabled, requires every distinct missing material id to have at least one reachable world item source before the candidate is considered.")]
+        public bool requireGatherableMissingMaterials = true;
+
         [BlackboardOnly]
         [Tooltip("Output item id of the selected craftable item. Cleared when no suitable recipe is found.")]
         public BBParameter<string> itemId;
@@ -32,9 +39,9 @@ namespace SurvivalEngine
             get { return "Find best craftable item as " + itemId; }
         }
 
-        protected override void OnExecute()
+protected override void OnExecute()
         {
-            PlayerCharacter player = PlayerCharacter.GetFirst();
+            PlayerCharacter player = AIRuntimeSceneQuery.GetPrimaryPlayer();
             if (player == null)
             {
                 ClearResult();
@@ -52,6 +59,7 @@ namespace SurvivalEngine
 
             if (best == null)
             {
+                RecordNoCandidate();
                 ClearResult();
                 EndAction(false);
                 return;
@@ -76,6 +84,9 @@ namespace SurvivalEngine
                 return null;
 
             if (skipAlreadyCraftedItems && player.Crafting.CountTotalCrafted(item) > 0)
+                return null;
+
+            if (skipRecentlyFailedCraftCandidates && AICraftCandidateFailureMemory.IsBlocked(item.id, out _))
                 return null;
 
             CraftCostData cost = item.GetCraftCost();
@@ -143,7 +154,70 @@ namespace SurvivalEngine
 
             candidate.totalMaterialCount = candidate.allMaterialIds.Count;
             candidate.sortOrder = item.craft_sort_order;
+
+            if (requireGatherableMissingMaterials && !HasGatherableSourcesForMissingMaterials(player, candidate))
+                return null;
+
             return candidate;
+        }
+
+        private bool HasGatherableSourcesForMissingMaterials(PlayerCharacter player, CraftCandidate candidate)
+        {
+            if (candidate == null || candidate.missingMaterialIds.Count == 0)
+                return true;
+
+            Vector3 playerPosition = player.transform.position;
+            HashSet<string> checkedIds = new HashSet<string>();
+            foreach (string missingId in candidate.missingMaterialIds)
+            {
+                if (string.IsNullOrEmpty(missingId) || !checkedIds.Add(missingId))
+                    continue;
+
+                if (!HasGatherableWorldSource(player, playerPosition, missingId))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private bool HasGatherableWorldSource(PlayerCharacter player, Vector3 playerPosition, string itemId)
+        {
+            foreach (Item item in AIRuntimeSceneQuery.GetItems())
+            {
+                if (item == null || item.data == null || item.quantity <= 0 || !item.gameObject.activeInHierarchy)
+                    continue;
+
+                if (!string.Equals(item.data.id, itemId, System.StringComparison.Ordinal))
+                    continue;
+
+                Selectable selectable = item.GetSelectable();
+                if (selectable != null && !selectable.CanBeInteracted())
+                    continue;
+
+                if (!player.Inventory.CanTakeItem(item.data, item.quantity))
+                    continue;
+
+                if (!HasReachablePath(player, playerPosition, GetTargetPosition(item, playerPosition)))
+                    continue;
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private Vector3 GetTargetPosition(Item item, Vector3 fromPosition)
+        {
+            Selectable selectable = item.GetSelectable();
+            if (selectable != null)
+                return selectable.GetClosestInteractPoint(fromPosition);
+
+            return item.transform.position;
+        }
+
+        private bool HasReachablePath(PlayerCharacter player, Vector3 fromPosition, Vector3 toPosition)
+        {
+            return AIMovementReachability.HasReachablePath(player, fromPosition, toPosition);
         }
 
         private bool IsBetterCandidate(CraftCandidate candidate, CraftCandidate best)
@@ -256,5 +330,26 @@ namespace SurvivalEngine
                 return missingItemCount + missingRequirementCount * 10 + missingNearCount * 20;
             }
         }
-    }
+    
+
+private void RecordNoCandidate()
+        {
+            var debugger = GameStateDebugger.Instance;
+            if (debugger == null)
+                return;
+
+            debugger.RecordEvent(
+                "behavior_tree",
+                "find_best_craftable_no_candidate",
+                "FindBestCraftableItem did not find a learned, unowned craft candidate with currently gatherable missing materials.",
+                "info",
+                new Dictionary<string, object>
+                {
+                    ["skip_owned_items"] = skipOwnedItems,
+                    ["skip_already_crafted_items"] = skipAlreadyCraftedItems,
+                    ["require_gatherable_missing_materials"] = requireGatherableMissingMaterials,
+                    ["skip_recently_failed_craft_candidates"] = skipRecentlyFailedCraftCandidates
+                });
+        }
+}
 }

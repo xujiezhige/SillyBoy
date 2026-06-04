@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "description": "Reusable AI behavior-tree regression profiles. Each entry points to a YAML source and generated NodeCanvas asset.",
+  "defaults": {
+    "report_folder": "Assets/BTDebugReports",
+    "event_count": 120,
+    "player_name": "PlayerCharacter",
+    "acceptance": {
+      "max_error_findings": 0,
+      "max_repeated_warnings": 0
+    }
+  },
+  "profiles": [
+    {
+      "name": "CraftAllUsefulItems",
+      "description": "Craft the best reachable useful item, gathering missing materials as needed.",
+      "yaml_path": "Assets/BTAssets/CraftAllUsefulItems.yaml",
+      "asset_path": "Assets/BTAssets/CraftAllUsefulItems.asset",
+      "event_count": 160
+    },
+    {
+      "name": "ForageHerbsAndSeedsLoop",
+      "description": "Repeatedly gather herbs and seed resources to validate plant forage paths.",
+      "yaml_path": "Assets/BTAssets/ForageHerbsAndSeedsLoop.yaml",
+      "asset_path": "Assets/BTAssets/ForageHerbsAndSeedsLoop.asset",
+      "event_count": 120
+    },
+    {
+      "name": "GatherStarterSuppliesLoop",
+      "description": "Prefer wood and rock, then fall back to forage resources.",
+      "yaml_path": "Assets/BTAssets/GatherStarterSuppliesLoop.yaml",
+      "asset_path": "Assets/BTAssets/GatherStarterSuppliesLoop.asset",
+      "event_count": 120
+    },
+    {
+      "name": "GatherWoodAndRockLoop",
+      "description": "Minimal early-game material collection loop for movement and pickup validation.",
+      "yaml_path": "Assets/BTAssets/GatherWoodAndRockLoop.yaml",
+      "asset_path": "Assets/BTAssets/GatherWoodAndRockLoop.asset",
+      "event_count": 120
+    },
+    {
+      "name": "PotionRedPrepLoop",
+      "description": "Prepare red potion crafting by making vials and gathering herbs, mushrooms, and fallback rock.",
+      "yaml_path": "Assets/BTAssets/PotionRedPrepLoop.yaml",
+      "asset_path": "Assets/BTAssets/PotionRedPrepLoop.asset",
+      "event_count": 140
+    },
+    {
+      "name": "ToolProgressionLoop",
+      "description": "Progress toward a pickaxe by crafting when ready or gathering core materials.",
+      "yaml_path": "Assets/BTAssets/ToolProgressionLoop.yaml",
+      "asset_path": "Assets/BTAssets/ToolProgressionLoop.asset",
+      "event_count": 120
+    },
+    {
+      "name": "WildPantryRotationLoop",
+      "description": "Rotate between forage plants and useful craft materials using FlipSelector.",
+      "yaml_path": "Assets/BTAssets/WildPantryRotationLoop.yaml",
+      "asset_path": "Assets/BTAssets/WildPantryRotationLoop.asset",
+      "event_count": 140
+    }
+  ]
+}

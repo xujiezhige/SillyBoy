@@ -176,9 +176,7 @@ namespace SurvivalEngine
 
         private Vector3 GetTargetPosition()
         {
-            Vector3 position = currentSelectable.GetClosestInteractPoint(player.GetInteractCenter());
-            position.y = player.transform.position.y;
-            return position;
+            return currentSelectable.GetClosestInteractPoint(player.GetInteractCenter());
         }
     }
 }

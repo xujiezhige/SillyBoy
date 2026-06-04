@@ -1,0 +1,88 @@
+name: GatherStarterSuppliesLoop
+repeat: true
+update_interval: 0
+root:
+  name: Loop Gather Starter Supplies
+  type: Repeater
+  params:
+    repeaterMode: RepeatForever
+  children:
+    - name: Prefer Core Materials Then Forage
+      type: Selector
+      children:
+        - name: Gather Wood Or Rock
+          type: Sequencer
+          children:
+            - name: Find Nearest Wood Or Rock
+              type: Action
+              task: FindNearestMaterial
+              params:
+                materialItemIds:
+                  - wood
+                  - rock
+                range: 18
+                requireInventorySpace: true
+                avoidRecentlyFailedTargets: true
+                failedTargetCooldown: 8
+                requireReachablePath: true
+                materialItemId:
+                  var: _nearestMaterialItemId
+                target:
+                  var: _materialTarget
+                targetObject:
+                  var: _materialTargetObject
+            - name: Move To Core Material And Interact
+              type: Action
+              task: MoveToInteract
+              params:
+                target:
+                  var: _materialTarget
+                targetObject:
+                  var: _materialTargetObject
+                droppedItems:
+                  var: _droppedItems
+            - name: Pick Up Core Material Drops
+              type: Action
+              task: PickUpDroppedItems
+              params:
+                items:
+                  var: _droppedItems
+        - name: Gather Herbs Or Seeds
+          type: Sequencer
+          children:
+            - name: Find Nearby Herb Or Seed
+              type: Action
+              task: FindNearestMaterial
+              params:
+                materialItemIds:
+                  - herbs
+                  - seed_wheat
+                  - seed_corn
+                  - seed_carrot
+                range: 22
+                requireInventorySpace: true
+                avoidRecentlyFailedTargets: true
+                failedTargetCooldown: 10
+                requireReachablePath: true
+                materialItemId:
+                  var: _nearestMaterialItemId
+                target:
+                  var: _materialTarget
+                targetObject:
+                  var: _materialTargetObject
+            - name: Move To Forage Target And Interact
+              type: Action
+              task: MoveToInteract
+              params:
+                target:
+                  var: _materialTarget
+                targetObject:
+                  var: _materialTargetObject
+                droppedItems:
+                  var: _droppedItems
+            - name: Pick Up Forage Drops
+              type: Action
+              task: PickUpDroppedItems
+              params:
+                items:
+                  var: _droppedItems

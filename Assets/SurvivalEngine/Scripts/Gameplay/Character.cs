@@ -170,7 +170,8 @@ namespace SurvivalEngine
 
         private void FixedUpdate()
         {
-            if (TheGame.Get().IsPaused())
+            TheGame game = TheGame.Get();
+            if (game == null || game.IsPaused())
                 return;
 
             if (!move_enabled || IsDead())
@@ -217,7 +218,8 @@ namespace SurvivalEngine
 
         void Update()
         {
-            if (TheGame.Get().IsPaused())
+            TheGame game = TheGame.Get();
+            if (game == null || game.IsPaused())
                 return;
 
             if (IsDead())

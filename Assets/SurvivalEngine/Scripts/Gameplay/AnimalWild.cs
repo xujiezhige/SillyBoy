@@ -108,11 +108,16 @@ namespace SurvivalEngine
 
         void FixedUpdate()
         {
-            if (TheGame.Get().IsPaused())
+            TheGame game = TheGame.Get();
+            if (game == null || game.IsPaused())
                 return;
 
             //Optimization, dont run if too far
-            float dist = (TheCamera.Get().GetTargetPos() - transform.position).magnitude;
+            TheCamera camera = TheCamera.Get();
+            if (camera == null)
+                return;
+
+            float dist = (camera.GetTargetPos() - transform.position).magnitude;
             float active_range = Mathf.Max(detect_range * 2f, selectable.active_range * 0.8f);
             is_active = (state != AnimalState.Wander && state != AnimalState.Dead) || character.IsMoving() || dist < active_range;
         }
@@ -120,11 +125,12 @@ namespace SurvivalEngine
         private void Update()
         {
             //Animations
-            bool paused = TheGame.Get().IsPaused();
+            TheGame game = TheGame.Get();
+            bool paused = game == null || game.IsPaused();
             if (animator != null)
                 animator.enabled = !paused;
 
-            if (TheGame.Get().IsPaused())
+            if (paused)
                 return;
 
             if (state == AnimalState.Dead || behavior == AnimalBehavior.None || !is_active)

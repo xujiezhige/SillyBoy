@@ -18,6 +18,8 @@ root:
             skipOwnedItems: true
             skipAlreadyCraftedItems: true
             outputOnlyMissingMaterials: true
+            skipRecentlyFailedCraftCandidates: true
+            requireGatherableMissingMaterials: true
             itemId:
               var: _bestCraftItemId
             materialItemIds:
@@ -46,8 +48,15 @@ root:
                       params:
                         materialItemIds:
                           var: _missingMaterialItemIds
+                        craftItemId:
+                          var: _bestCraftItemId
                         range: 999
                         requireInventorySpace: true
+                        avoidRecentlyFailedTargets: true
+                        failedTargetCooldown: 10
+                        rememberFailedCraftCandidate: true
+                        failedCraftCandidateCooldown: 18
+                        requireReachablePath: true
                         materialItemId:
                           var: _nearestMaterialItemId
                         target:

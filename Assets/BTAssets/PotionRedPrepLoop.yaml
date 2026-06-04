@@ -1,0 +1,95 @@
+name: PotionRedPrepLoop
+repeat: true
+update_interval: 0
+root:
+  name: Loop Prepare Red Potion
+  type: Repeater
+  params:
+    repeaterMode: RepeatForever
+  children:
+    - name: Make Potion Or Gather Ingredients
+      type: Selector
+      children:
+        - name: Craft Red Potion When Ready
+          type: Action
+          task: CraftItem
+          params:
+            itemId: potion_red
+        - name: Craft Empty Vial When Ready
+          type: Action
+          task: CraftItem
+          params:
+            itemId: potion_vial
+        - name: Gather Potion Herbs Or Mushroom
+          type: Sequencer
+          children:
+            - name: Find Potion Ingredient
+              type: Action
+              task: FindNearestMaterial
+              params:
+                materialItemIds:
+                  - herbs
+                  - mushroom_red
+                range: 80
+                requireInventorySpace: true
+                avoidRecentlyFailedTargets: true
+                failedTargetCooldown: 12
+                requireReachablePath: true
+                materialItemId:
+                  var: _nearestMaterialItemId
+                target:
+                  var: _materialTarget
+                targetObject:
+                  var: _materialTargetObject
+            - name: Move To Potion Ingredient
+              type: Action
+              task: MoveToInteract
+              params:
+                target:
+                  var: _materialTarget
+                targetObject:
+                  var: _materialTargetObject
+                droppedItems:
+                  var: _droppedItems
+            - name: Pick Up Potion Ingredient Drops
+              type: Action
+              task: PickUpDroppedItems
+              params:
+                items:
+                  var: _droppedItems
+        - name: Gather Rock For Vials
+          type: Sequencer
+          children:
+            - name: Find Rock For Vial
+              type: Action
+              task: FindNearestMaterial
+              params:
+                materialItemIds:
+                  - rock
+                range: 80
+                requireInventorySpace: true
+                avoidRecentlyFailedTargets: true
+                failedTargetCooldown: 12
+                requireReachablePath: true
+                materialItemId:
+                  var: _nearestMaterialItemId
+                target:
+                  var: _materialTarget
+                targetObject:
+                  var: _materialTargetObject
+            - name: Move To Vial Rock
+              type: Action
+              task: MoveToInteract
+              params:
+                target:
+                  var: _materialTarget
+                targetObject:
+                  var: _materialTargetObject
+                droppedItems:
+                  var: _droppedItems
+            - name: Pick Up Vial Rock Drops
+              type: Action
+              task: PickUpDroppedItems
+              params:
+                items:
+                  var: _droppedItems

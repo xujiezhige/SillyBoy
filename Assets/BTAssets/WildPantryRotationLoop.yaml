@@ -1,0 +1,88 @@
+name: WildPantryRotationLoop
+repeat: true
+update_interval: 0
+root:
+  name: Loop Rotate Wild Pantry Priorities
+  type: Repeater
+  params:
+    repeaterMode: RepeatForever
+  children:
+    - name: Rotate Gathering Branches
+      type: FlipSelector
+      children:
+        - name: Gather Herbs And Seeds
+          type: Sequencer
+          children:
+            - name: Find Pantry Plant
+              type: Action
+              task: FindNearestMaterial
+              params:
+                materialItemIds:
+                  - herbs
+                  - seed_wheat
+                  - seed_corn
+                  - seed_carrot
+                range: 55
+                requireInventorySpace: true
+                avoidRecentlyFailedTargets: true
+                failedTargetCooldown: 12
+                requireReachablePath: true
+                materialItemId:
+                  var: _nearestMaterialItemId
+                target:
+                  var: _materialTarget
+                targetObject:
+                  var: _materialTargetObject
+            - name: Move To Pantry Plant
+              type: Action
+              task: MoveToInteract
+              params:
+                target:
+                  var: _materialTarget
+                targetObject:
+                  var: _materialTargetObject
+                droppedItems:
+                  var: _droppedItems
+            - name: Pick Up Pantry Plant Drops
+              type: Action
+              task: PickUpDroppedItems
+              params:
+                items:
+                  var: _droppedItems
+        - name: Gather Useful Craft Materials
+          type: Sequencer
+          children:
+            - name: Find Nearby Wood Or Rock
+              type: Action
+              task: FindNearestMaterial
+              params:
+                materialItemIds:
+                  - wood
+                  - rock
+                range: 55
+                requireInventorySpace: true
+                avoidRecentlyFailedTargets: true
+                failedTargetCooldown: 12
+                requireReachablePath: true
+                materialItemId:
+                  var: _nearestMaterialItemId
+                target:
+                  var: _materialTarget
+                targetObject:
+                  var: _materialTargetObject
+            - name: Move To Craft Material
+              type: Action
+              task: MoveToInteract
+              params:
+                target:
+                  var: _materialTarget
+                targetObject:
+                  var: _materialTargetObject
+                droppedItems:
+                  var: _droppedItems
+            - name: Pick Up Craft Material Drops
+              type: Action
+              task: PickUpDroppedItems
+              params:
+                items:
+                  var: _droppedItems

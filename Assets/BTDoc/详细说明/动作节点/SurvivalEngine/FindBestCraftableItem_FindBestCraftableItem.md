@@ -17,6 +17,8 @@ Find the easiest useful item for the current player to craft and save its item i
 | `skipOwnedItems` | `bool` | `true` | When enabled, excludes recipes for items the current player already has in inventory. | - |
 | `skipAlreadyCraftedItems` | `bool` | `true` | When enabled, excludes recipes for items the current player has already crafted before. | - |
 | `outputOnlyMissingMaterials` | `bool` | `true` | When enabled, outputs only missing material ids. When disabled, outputs all material ids required by the selected recipe. | - |
+| `skipRecentlyFailedCraftCandidates` | `bool` | `true` | When enabled, skips craft candidates that recently failed because the tree could not find a gatherable source for their missing materials. | - |
+| `requireGatherableMissingMaterials` | `bool` | `true` | When enabled, requires every distinct missing material id to have at least one reachable world item source before the candidate is considered. | - |
 | `itemId` | `BBParameter<string>` | - | Output item id of the selected craftable item. Cleared when no suitable recipe is found. | BlackboardOnly |
 | `materialItemIds` | `BBParameter<List<string>>` | - | Output material item ids for the selected recipe. Contains missing materials only or all materials based on outputOnlyMissingMaterials. | BlackboardOnly |
 | `item` | `ItemData` | - | Item data produced by this craft candidate. | - |

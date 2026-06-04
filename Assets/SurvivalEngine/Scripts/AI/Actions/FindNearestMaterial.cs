@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using NodeCanvas.Framework;
 using ParadoxNotion.Design;
+using SurvivalEngine.Debugging;
 using UnityEngine;
 
 namespace SurvivalEngine
@@ -18,6 +19,24 @@ namespace SurvivalEngine
 
         [Tooltip("When enabled, ignores matching items that the player's inventory cannot currently take.")]
         public BBParameter<bool> requireInventorySpace = true;
+
+        [Tooltip("When enabled, skips targets that recently failed movement or interaction and are still in short-term failure memory.")]
+        public BBParameter<bool> avoidRecentlyFailedTargets = true;
+
+        [Tooltip("Seconds a failed target stays blocked before the tree may consider it again.")]
+        public BBParameter<float> failedTargetCooldown = 8f;
+
+        [Tooltip("When enabled, validates that the player can compute a complete NavMesh path to the target interact point.")]
+        public BBParameter<bool> requireReachablePath = true;
+
+        [Tooltip("Optional craft item id that requested these materials. Used for short-term failure memory when no gatherable target can be found.")]
+        public BBParameter<string> craftItemId;
+
+        [Tooltip("When enabled, temporarily blocks the current craft candidate after this action fails to find any material target.")]
+        public BBParameter<bool> rememberFailedCraftCandidate = true;
+
+        [Tooltip("Seconds a failed craft candidate stays blocked before the tree may consider it again.")]
+        public BBParameter<float> failedCraftCandidateCooldown = 15f;
 
         [BlackboardOnly]
         [Tooltip("Output item id of the nearest matching material found. Cleared when no material is found.")]
@@ -38,7 +57,7 @@ namespace SurvivalEngine
 
         protected override void OnExecute()
         {
-            PlayerCharacter player = PlayerCharacter.GetFirst();
+            PlayerCharacter player = AIRuntimeSceneQuery.GetPrimaryPlayer();
             if (player == null)
             {
                 ClearResult();
@@ -57,6 +76,7 @@ namespace SurvivalEngine
             Item item = GetNearestMaterial(player, wantedIds);
             if (item == null)
             {
+                HandleNoMaterialFound(wantedIds);
                 ClearResult();
                 EndAction(false);
                 return;
@@ -91,9 +111,9 @@ namespace SurvivalEngine
             float maxDistance = Mathf.Max(0f, range.value);
             float nearestSqrDistance = maxDistance * maxDistance;
 
-            foreach (Item item in Item.GetAll())
+            foreach (Item item in AIRuntimeSceneQuery.GetItems())
             {
-                if (!IsValidMaterial(item, player, wantedIds))
+                if (!IsValidMaterial(item, player, wantedIds, playerPosition))
                     continue;
 
                 Vector3 targetPosition = GetTargetPosition(item, playerPosition);
@@ -108,7 +128,7 @@ namespace SurvivalEngine
             return nearest;
         }
 
-        private bool IsValidMaterial(Item item, PlayerCharacter player, HashSet<string> wantedIds)
+        private bool IsValidMaterial(Item item, PlayerCharacter player, HashSet<string> wantedIds, Vector3 playerPosition)
         {
             if (item == null || item.data == null || item.quantity <= 0 || !item.gameObject.activeInHierarchy)
                 return false;
@@ -120,7 +140,26 @@ namespace SurvivalEngine
             if (selectable != null && !selectable.CanBeInteracted())
                 return false;
 
-            return !requireInventorySpace.value || player.Inventory.CanTakeItem(item.data, item.quantity);
+            if (requireInventorySpace.value && !player.Inventory.CanTakeItem(item.data, item.quantity))
+                return false;
+
+            Vector3 targetPosition = GetTargetPosition(item, playerPosition);
+            if (avoidRecentlyFailedTargets.value &&
+                AITargetFailureMemory.IsBlocked(item.gameObject, item.data.id, targetPosition, out _))
+                return false;
+
+            if (requireReachablePath.value && !HasReachablePath(playerPosition, targetPosition))
+            {
+                AITargetFailureMemory.RememberFailure(
+                    item.gameObject,
+                    item.data.id,
+                    targetPosition,
+                    "navmesh_unreachable_material",
+                    failedTargetCooldown.value);
+                return false;
+            }
+
+            return true;
         }
 
         private Vector3 GetTargetPosition(Item item, Vector3 fromPosition)
@@ -132,11 +171,44 @@ namespace SurvivalEngine
             return item.transform.position;
         }
 
+        private bool HasReachablePath(Vector3 fromPosition, Vector3 toPosition)
+        {
+            return AIMovementReachability.HasReachablePath(AIRuntimeSceneQuery.GetPrimaryPlayer(), fromPosition, toPosition);
+        }
+
         private void ClearResult()
         {
             materialItemId.value = string.Empty;
             target.value = Vector2.zero;
             targetObject.value = null;
+        }
+
+        private void HandleNoMaterialFound(HashSet<string> wantedIds)
+        {
+            string currentCraftItemId = craftItemId.value;
+            if (rememberFailedCraftCandidate.value && !string.IsNullOrEmpty(currentCraftItemId))
+            {
+                AICraftCandidateFailureMemory.RememberFailure(
+                    currentCraftItemId,
+                    "no_gatherable_material_target",
+                    failedCraftCandidateCooldown.value,
+                    new List<string>(wantedIds));
+            }
+
+            var debugger = GameStateDebugger.Instance;
+            if (debugger != null)
+            {
+                debugger.RecordEvent(
+                    "behavior_tree",
+                    "find_nearest_material_no_target",
+                    "FindNearestMaterial could not find any gatherable target for the requested material ids.",
+                    "warning",
+                    new Dictionary<string, object>
+                    {
+                        ["craft_item_id"] = currentCraftItemId,
+                        ["requested_material_ids"] = new List<string>(wantedIds)
+                    });
+            }
         }
     }
 }

@@ -498,6 +498,8 @@ namespace SurvivalEngine
 
         public static TheGame Get()
         {
+            if (_instance == null)
+                _instance = FindObjectOfType<TheGame>();
             return _instance;
         }
     }

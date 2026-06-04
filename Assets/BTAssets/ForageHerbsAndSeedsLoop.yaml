@@ -1,0 +1,48 @@
+name: ForageHerbsAndSeedsLoop
+repeat: true
+update_interval: 0
+root:
+  name: Loop Forage Herbs And Seeds
+  type: Repeater
+  params:
+    repeaterMode: RepeatForever
+  children:
+    - name: Forage One Nearby Consumable Resource
+      type: Sequencer
+      children:
+        - name: Find Nearest Herb Or Seed
+          type: Action
+          task: FindNearestMaterial
+          params:
+            materialItemIds:
+              - herbs
+              - seed_wheat
+              - seed_corn
+              - seed_carrot
+            range: 15
+            requireInventorySpace: true
+            avoidRecentlyFailedTargets: true
+            failedTargetCooldown: 15
+            requireReachablePath: true
+            materialItemId:
+              var: _nearestMaterialItemId
+            target:
+              var: _materialTarget
+            targetObject:
+              var: _materialTargetObject
+        - name: Move To Resource And Interact
+          type: Action
+          task: MoveToInteract
+          params:
+            target:
+              var: _materialTarget
+            targetObject:
+              var: _materialTargetObject
+            droppedItems:
+              var: _droppedItems
+        - name: Pick Up Dropped Items
+          type: Action
+          task: PickUpDroppedItems
+          params:
+            items:
+              var: _droppedItems
