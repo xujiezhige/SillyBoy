@@ -123,7 +123,7 @@ Expected recovery behavior:
 
 ## Latest Validation
 
-Latest Play Mode batch regression:
+Latest available Play Mode batch regression:
 
 - Summary: `Assets/BTDebugReports/BTRegressionSummary_20260603_230209.json`
 - Profiles: 7
@@ -133,9 +133,16 @@ Latest Play Mode batch regression:
 - Warning findings: 0
 - Repeated warnings: 0
 
-Important follow-up: the latest report snapshot shows `PlayerCharacter.is_dead=true` and movement disabled while the tree was bound. `GameStateDebugger` now reports this as `player_dead_during_ai_debug` / `player_movement_disabled_during_ai_debug` errors. Re-run the profile regression from a reset Play Mode state with a living, movable player before treating that latest summary as final acceptance.
+This summary was generated before `RunAIBTProfileRegression` started writing the explicit `runtime_sampled` field, but it is a Play Mode report (`application_is_playing=true`) and all registered profiles passed the current zero-error and zero-repeated-warning thresholds.
 
-Unity Console still contains non-AI `NullReferenceException` noise from UI, camera, inventory, character, and control scripts. These exceptions are outside the behavior-tree diagnostic chain and should be tracked separately before publishing the framework.
+Current validation gate for future runs:
+
+- `acceptance.runtime_sampled == true`
+- `acceptance.no_error_findings == true`
+- `acceptance.no_repeated_warnings == true`
+- `acceptance.all_profiles_passed == true`
+
+Known non-framework risk: Unity Console may still contain non-AI `NullReferenceException` noise from UI, camera, inventory, character, or control scripts in some scenes. These exceptions are outside the behavior-tree diagnostic chain and should be tracked separately before publishing the framework.
 
 ## Porting Checklist
 

@@ -11,11 +11,16 @@ namespace SillyBoy.Editor.MCPTools
     internal static class UnityMcpAutoStart
     {
         private const string SessionInitializedKey = "SillyBoy.UnityMcpAutoStart.SessionInitialized";
+        private const string PackageAutoStartSessionInitializedKey = "HttpAutoStartHandler.SessionInitialized";
         private const string AutoStartOnLoadKey = "MCPForUnity.AutoStartOnLoad";
+        private const string UseHttpTransportKey = "MCPForUnity.UseHttpTransport";
+        private const string HttpTransportScopeKey = "MCPForUnity.HttpTransportScope";
 
         static UnityMcpAutoStart()
         {
             EditorPrefs.SetBool(AutoStartOnLoadKey, true);
+            EditorPrefs.SetBool(UseHttpTransportKey, true);
+            EditorPrefs.SetString(HttpTransportScopeKey, "local");
 
             if (SessionState.GetBool(SessionInitializedKey, false))
             {
@@ -41,8 +46,13 @@ namespace SillyBoy.Editor.MCPTools
         {
             try
             {
-                EditorConfigurationCache.Instance.SetUseHttpTransport(true);
-                EditorConfigurationCache.Instance.SetHttpTransportScope("local");
+                // Let MCPForUnity's built-in HttpAutoStartHandler own startup whenever it
+                // saw the enabled preference during InitializeOnLoad. This fallback only
+                // covers the first editor launch where this project script may run after it.
+                if (SessionState.GetBool(PackageAutoStartSessionInitializedKey, false))
+                {
+                    return;
+                }
 
                 if (MCPServiceLocator.Bridge.IsRunning)
                 {
