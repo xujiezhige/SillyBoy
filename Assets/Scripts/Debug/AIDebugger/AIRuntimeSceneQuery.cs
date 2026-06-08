@@ -54,7 +54,13 @@ namespace SurvivalEngine.Debugging
 
         private static bool IsUsable(PlayerCharacter player)
         {
-            return player != null && player.gameObject.scene.IsValid();
+            if (player == null || !player.gameObject.scene.IsValid() || !player.gameObject.activeInHierarchy || !player.enabled)
+                return false;
+
+            PlayerData data = PlayerData.Get();
+            return data != null
+                && data.HasInventory(player.player_id)
+                && data.HasEquipInventory(player.player_id);
         }
 
         private static bool IsUsable(Item item)

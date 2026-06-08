@@ -27,7 +27,7 @@ namespace SillyBoy.Editor.MCPTools
             bool regenerate = @params["regenerate"]?.ToObject<bool?>() ?? true;
             bool bindPlayerTree = @params["bind_player_tree"]?.ToObject<bool?>() ?? true;
             bool clearDebugger = @params["clear_debugger"]?.ToObject<bool?>() ?? true;
-            bool writeReports = @params["write_reports"]?.ToObject<bool?>() ?? true;
+            bool writeReports = @params["write_reports"]?.ToObject<bool?>() ?? !Application.isPlaying;
             bool includeSampleTree = @params["include_sample_tree"]?.ToObject<bool?>() ?? false;
             int eventCount = @params["event_count"]?.ToObject<int?>() ?? manifestDefaults.event_count ?? 120;
             string reportFolder = @params["report_folder"]?.ToString() ?? manifestDefaults.report_folder ?? AIBehaviorTreeReportUtility.DefaultReportFolder;
@@ -37,6 +37,17 @@ namespace SillyBoy.Editor.MCPTools
 
             try
             {
+                if (Application.isPlaying && regenerate)
+                {
+                    return new ErrorResponse(
+                        "Cannot regenerate behavior-tree assets while Unity is in Play Mode.",
+                        new
+                        {
+                            manifest_path = manifestPath,
+                            recommendation = "Stop Play Mode, regenerate/refresh assets in Edit Mode, then enter Play Mode for runtime regression sampling."
+                        });
+                }
+
                 var profiles = ResolveProfiles(@params, manifestPath, includeSampleTree);
                 var results = new List<ProfileRegressionResult>();
 

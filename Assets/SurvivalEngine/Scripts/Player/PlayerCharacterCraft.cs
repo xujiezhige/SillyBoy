@@ -448,7 +448,7 @@ namespace SurvivalEngine
                 Item ritem = null;
                 if (character.Inventory.CanTakeItem(item, item.craft_quantity))
                     character.Inventory.GainItem(item, item.craft_quantity);
-                else
+                else if (item.CanBeDropped())
                     ritem = Item.Create(item, transform.position, item.craft_quantity);
 
                 character.SaveData.AddCraftCount(item.id);

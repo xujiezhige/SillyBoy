@@ -9,7 +9,7 @@ namespace SillyBoy.Editor.MCPTools
 {
     internal static class AIBehaviorTreeReportUtility
     {
-        internal const string DefaultReportFolder = "Assets/BTDebugReports";
+        internal const string DefaultReportFolder = "Library/BTDebugReports";
 
         internal static string WriteJsonReport(string reportFolder, string prefix, object payload, bool includeMilliseconds)
         {
@@ -24,7 +24,7 @@ namespace SillyBoy.Editor.MCPTools
             string fullPath = Path.Combine(fullFolder, fileName);
             File.WriteAllText(fullPath, JsonConvert.SerializeObject(payload, Formatting.Indented));
 
-            AssetDatabase.Refresh();
+            RefreshAssetDatabaseIfNeeded(reportFolder);
             return Path.Combine(reportFolder, fileName).Replace('\\', '/');
         }
 
@@ -75,10 +75,26 @@ namespace SillyBoy.Editor.MCPTools
 
         internal static string NormalizeAssetFolder(string folder, string fallback)
         {
-            if (string.IsNullOrWhiteSpace(folder) || !folder.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrWhiteSpace(folder))
                 return fallback;
 
-            return folder.Replace('\\', '/').TrimEnd('/');
+            string normalized = folder.Replace('\\', '/').TrimEnd('/');
+            if (!normalized.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase) &&
+                !normalized.StartsWith("Library/", StringComparison.OrdinalIgnoreCase))
+                return fallback;
+
+            return normalized;
+        }
+
+        private static void RefreshAssetDatabaseIfNeeded(string folder)
+        {
+            if (!folder.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                return;
+
+            AssetDatabase.Refresh();
         }
 
         internal static string ToAssetPath(string fullPath)

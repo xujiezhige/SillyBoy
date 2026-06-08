@@ -21,13 +21,25 @@ namespace SillyBoy.Editor.MCPTools
             bool bindPlayerTree = @params["bind_player_tree"]?.ToObject<bool?>() ?? true;
             bool clearDebugger = @params["clear_debugger"]?.ToObject<bool?>() ?? true;
             bool saveSceneIfDirty = @params["save_scene_if_dirty"]?.ToObject<bool?>() ?? false;
-            bool writeReport = @params["write_report"]?.ToObject<bool?>() ?? true;
+            bool writeReport = @params["write_report"]?.ToObject<bool?>() ?? !Application.isPlaying;
             int eventCount = @params["event_count"]?.ToObject<int?>() ?? 120;
             string reportFolder = @params["report_folder"]?.ToString() ?? AIBehaviorTreeReportUtility.DefaultReportFolder;
             string playerName = @params["player_name"]?.ToString() ?? "PlayerCharacter";
 
             try
             {
+                if (Application.isPlaying && regenerate)
+                {
+                    return new ErrorResponse(
+                        "Cannot regenerate behavior-tree assets while Unity is in Play Mode.",
+                        new
+                        {
+                            yaml_path = yamlPath,
+                            asset_path = assetPath,
+                            recommendation = "Stop Play Mode, regenerate/refresh assets in Edit Mode, then enter Play Mode for runtime sampling."
+                        });
+                }
+
                 object regenerationResult = null;
                 if (regenerate)
                 {

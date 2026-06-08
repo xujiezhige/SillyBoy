@@ -154,11 +154,17 @@ namespace SurvivalEngine
 
         private bool CanStoreItem(Item item)
         {
-            return item != null && player.Inventory.CanTakeItem(item.data, item.quantity);
+            return item != null && AIInventorySpaceUtility.CanTakeOrMakeRoom(player, item.data, item.quantity);
         }
 
         private void PickUpCurrentItem()
         {
+            if (!AIInventorySpaceUtility.EnsureCanTake(player, currentItem.data, currentItem.quantity))
+            {
+                EndAction(false);
+                return;
+            }
+
             waitingForPickup = true;
             player.StopMove();
             currentSelectable.Use(player, currentSelectable.GetClosestInteractPoint(player.GetInteractCenter()));

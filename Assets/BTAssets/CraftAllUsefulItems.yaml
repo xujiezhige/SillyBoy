@@ -15,8 +15,10 @@ root:
           type: Action
           task: FindBestCraftableItem
           params:
-            skipOwnedItems: true
+            skipOwnedItems: false
             skipAlreadyCraftedItems: true
+            requireLearnedRecipes: false
+            allowCraftedDependencyItems: true
             outputOnlyMissingMaterials: true
             skipRecentlyFailedCraftCandidates: true
             requireGatherableMissingMaterials: true
@@ -28,60 +30,83 @@ root:
           type: Selector
           children:
             - name: Craft Immediately If Possible
+              type: Sequencer
+              children:
+                - name: Move Near Craft Requirement
+                  type: Action
+                  task: MoveToCraftNear
+                  params:
+                    itemId:
+                      var: _bestCraftItemId
+                    range: 999
+                    requireReachablePath: true
+                - name: Craft At Requirement If Possible
+                  type: Action
+                  task: CraftItem
+                  params:
+                    itemId:
+                      var: _bestCraftItemId
+            - name: Gather One Material And Try Craft
+              type: Sequencer
+              children:
+                - name: Find Nearest Missing Material
+                  type: Action
+                  task: FindNearestMaterial
+                  params:
+                    materialItemIds:
+                      var: _missingMaterialItemIds
+                    craftItemId:
+                      var: _bestCraftItemId
+                    range: 999
+                    requireInventorySpace: true
+                    avoidRecentlyFailedTargets: true
+                    failedTargetCooldown: 10
+                    rememberFailedCraftCandidate: true
+                    failedCraftCandidateCooldown: 18
+                    requireReachablePath: true
+                    materialItemId:
+                      var: _nearestMaterialItemId
+                    target:
+                      var: _materialTarget
+                    targetObject:
+                      var: _materialTargetObject
+                - name: Gather Material From Scene Source
+                  type: Action
+                  task: GatherMaterialTarget
+                  params:
+                    target:
+                      var: _materialTarget
+                    targetObject:
+                      var: _materialTargetObject
+                    materialItemId:
+                      var: _nearestMaterialItemId
+                    craftItemId:
+                      var: _bestCraftItemId
+                    droppedItems:
+                      var: _droppedItems
+                - name: Pick Up Dropped Items
+                  type: Action
+                  task: PickUpDroppedItems
+                  params:
+                    items:
+                      var: _droppedItems
+                - name: Move Near Craft Requirement After Gathering
+                  type: Action
+                  task: MoveToCraftNear
+                  params:
+                    itemId:
+                      var: _bestCraftItemId
+                    range: 999
+                    requireReachablePath: true
+                - name: Craft After Gathering
+                  type: Action
+                  task: CraftItem
+                  params:
+                    itemId:
+                      var: _bestCraftItemId
+            - name: Continue With Next Craft Search
               type: Action
-              task: CraftItem
+              task: ContinueCraftSearch
               params:
                 itemId:
                   var: _bestCraftItemId
-            - name: Gather Missing Materials And Craft
-              type: Repeater
-              params:
-                repeaterMode: RepeatUntil
-                repeatUntilStatus: Success
-              children:
-                - name: Gather One Material Then Try Craft
-                  type: Sequencer
-                  children:
-                    - name: Find Nearest Missing Material
-                      type: Action
-                      task: FindNearestMaterial
-                      params:
-                        materialItemIds:
-                          var: _missingMaterialItemIds
-                        craftItemId:
-                          var: _bestCraftItemId
-                        range: 999
-                        requireInventorySpace: true
-                        avoidRecentlyFailedTargets: true
-                        failedTargetCooldown: 10
-                        rememberFailedCraftCandidate: true
-                        failedCraftCandidateCooldown: 18
-                        requireReachablePath: true
-                        materialItemId:
-                          var: _nearestMaterialItemId
-                        target:
-                          var: _materialTarget
-                        targetObject:
-                          var: _materialTargetObject
-                    - name: Move To Material And Interact
-                      type: Action
-                      task: MoveToInteract
-                      params:
-                        target:
-                          var: _materialTarget
-                        targetObject:
-                          var: _materialTargetObject
-                        droppedItems:
-                          var: _droppedItems
-                    - name: Pick Up Dropped Items
-                      type: Action
-                      task: PickUpDroppedItems
-                      params:
-                        items:
-                          var: _droppedItems
-                    - name: Craft After Gathering
-                      type: Action
-                      task: CraftItem
-                      params:
-                        itemId:
-                          var: _bestCraftItemId
